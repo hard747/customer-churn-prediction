@@ -1,0 +1,5 @@
+rango_tenure,total_clientes,clientes_churn,tasa_churn_pct
+0-12 meses,2186,1037,47.44
+13-24 meses,1024,294,28.71
+25-48 meses,1594,325,20.39
+49+ meses,2239,213,9.51

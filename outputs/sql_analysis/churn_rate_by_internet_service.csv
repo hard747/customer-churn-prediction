@@ -1,0 +1,4 @@
+InternetService,total_clientes,clientes_churn,tasa_churn_pct,cargo_mensual_promedio
+Fiber optic,3096,1297,41.89,91.5
+DSL,2421,459,18.96,58.1
+No,1526,113,7.4,21.08

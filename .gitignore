@@ -1,0 +1,19 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Bases de datos y artefactos generados (se recrean con src/run_all.py)
+data/churn.db
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
