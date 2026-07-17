@@ -429,6 +429,11 @@ evidence that the model discriminates well); the net value comparison
 between the model-driven strategy and random selection at each depth;
 an actionable table of the highest-risk customers; and a decile slicer.
 
+There's also a second version at [`reports/dashboard.html`](reports/dashboard.html):
+a self-contained page (no external dependencies) with the same KPIs and
+charts, that runs straight in the browser with nothing to install — see
+it live at **[hard747.github.io/customer-churn-prediction/reports/dashboard.html](https://hard747.github.io/customer-churn-prediction/reports/dashboard.html)**.
+
 ## Additional track: enterprise pattern (CRM → dbt → warehouse)
 
 [`warehouse_demo/`](warehouse_demo/README.md) implements, alongside the
