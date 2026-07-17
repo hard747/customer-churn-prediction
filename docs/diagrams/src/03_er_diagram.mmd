@@ -1,0 +1,44 @@
+erDiagram
+    CUSTOMERS {
+        string customerID PK
+        string gender
+        string SeniorCitizen
+        string Partner
+        string Dependents
+        int tenure
+        string PhoneService
+        string MultipleLines
+        string InternetService
+        string OnlineSecurity
+        string OnlineBackup
+        string DeviceProtection
+        string TechSupport
+        string StreamingTV
+        string StreamingMovies
+        string Contract
+        string PaperlessBilling
+        string PaymentMethod
+        float MonthlyCharges
+        float TotalCharges
+        string Churn
+    }
+
+    CUSTOMER_RISK_SCORES {
+        string customerID PK "CSV derivado, no es tabla de BD"
+        float churn_probability
+        string actual_churn
+        int risk_decile
+    }
+
+    BUSINESS_IMPACT_SIMULATION {
+        string strategy "CSV derivado, no es tabla de BD"
+        int depth_pct
+        int n_contacted
+        int n_true_churners_contacted
+        float cost
+        float expected_revenue_saved
+        float net_value
+    }
+
+    CUSTOMERS ||--|| CUSTOMER_RISK_SCORES : "puntuado como (1 fila por cliente)"
+    CUSTOMER_RISK_SCORES ||--o{ BUSINESS_IMPACT_SIMULATION : "agregado por profundidad de decil"

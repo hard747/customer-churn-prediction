@@ -1,0 +1,22 @@
+flowchart TB
+    analyst["👤 Data Analyst / Scientist<br/><small>Ejecuta el pipeline, revisa notebooks</small>"]
+    retention["👤 Equipo de Retención<br/><small>Consume la lista de riesgo en Power BI</small>"]
+
+    system[["🖥️ Customer Churn Prediction<br/><small>Pipeline batch: SQL, EDA, entrenamiento,<br/>scoring, simulación de impacto</small>"]]
+
+    source[("Telco Customer Churn IBM<br/><small>CSV, snapshot estático</small>")]
+    db[("SQLite / Postgres<br/><small>tabla customers</small>")]
+    bi["Power BI / Tableau<br/><small>Dashboard de retención<br/>(fuera de este repo)</small>"]
+
+    analyst -->|"Ejecuta run_all.py"| system
+    system -->|"Descarga una vez, manual"| source
+    system <-->|"Lee / escribe via SQLAlchemy"| db
+    system -->|"Exporta customer_risk_scores.csv"| bi
+    retention -->|"Consulta clientes a priorizar"| bi
+
+    style system fill:#1a5fb4,color:#fff
+    style analyst fill:#0b3866,color:#fff
+    style retention fill:#0b3866,color:#fff
+    style source fill:#8a8a8a,color:#fff
+    style db fill:#8a8a8a,color:#fff
+    style bi fill:#8a8a8a,color:#fff

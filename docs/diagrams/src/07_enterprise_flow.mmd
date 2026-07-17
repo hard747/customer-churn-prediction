@@ -1,0 +1,50 @@
+flowchart TB
+    csv[("Telco-Customer-Churn.csv<br/><small>unica fuente real</small>")]
+
+    subgraph sim["Simulado (no existe de verdad)"]
+        crm["CRM / ERP<br/><small>Salesforce / SAP</small>"]
+    end
+
+    extract["extract_to_raw()<br/><small>build_raw_tables.py</small>"]
+
+    subgraph raw["Capa RAW (Postgres)"]
+        direction LR
+        r1[("raw_crm_customers")]
+        r2[("raw_crm_subscriptions")]
+        r3[("raw_billing_charges")]
+        r4[("raw_churn_labels")]
+    end
+
+    dbtrun["dbt run<br/><small>staging + mart</small>"]
+    dbttest{"dbt test<br/><small>25 tests</small>"}
+    feat[("fct_customer_features<br/><small>feature table</small>")]
+
+    train["train_from_feature_table.py<br/><small>LR / RF / XGBoost + CV</small>"]
+    model[("best_model.joblib")]
+    score["generate_risk_scores_from_feature_table.py"]
+    scores[("customer_risk_scores.csv")]
+    bi["Power BI / Tableau"]
+
+    csv -.->|"simula"| crm
+    crm --> extract
+    extract --> r1 & r2 & r3 & r4
+
+    r1 & r2 & r3 & r4 --> dbtrun
+    dbtrun --> dbttest
+    dbttest -->|"PASS"| feat
+    dbttest -->|"FAIL"| stop["Flow se detiene<br/><small>no entrena con datos malos</small>"]
+
+    feat --> train
+    train --> model
+    model --> score
+    feat --> score
+    score --> scores
+    scores --> bi
+
+    style crm fill:#8a8a8a,color:#fff
+    style csv fill:#5f5fa8,color:#fff
+    style feat fill:#1a5fb4,color:#fff
+    style dbttest fill:#c64600,color:#fff
+    style stop fill:#a51d2d,color:#fff
+    style model fill:#26a269,color:#fff
+    style bi fill:#8a8a8a,color:#fff

@@ -1,0 +1,43 @@
+flowchart TB
+    analyst["👤 Data Analyst / Scientist"]
+    ci["⚙️ GitHub Actions<br/><small>lint + pytest en cada push/PR</small>"]
+
+    subgraph repo["customer-churn-prediction"]
+        direction TB
+        orchestrator["run_all.py<br/><small>[Python] · orquesta los 6 pasos</small>"]
+        etl["build_database.py<br/><small>[pandas]</small>"]
+        sql["run_sql_analysis.py<br/><small>[SQLAlchemy]</small>"]
+        eda["01_eda.ipynb<br/><small>[nbclient]</small>"]
+        train["train_models.py<br/><small>[scikit-learn / XGBoost]</small>"]
+        score["generate_risk_scores.py<br/><small>[joblib]</small>"]
+        impact["02_business_impact.ipynb<br/><small>[nbclient]</small>"]
+        dbmodule["db.py<br/><small>[SQLAlchemy engine]</small>"]
+    end
+
+    sqlite[("churn.db<br/><small>SQLite · default</small>")]
+    postgres[("Postgres<br/><small>Docker / Supabase / Neon · opcional</small>")]
+
+    analyst --> orchestrator
+    orchestrator -->|"1"| etl
+    orchestrator -->|"2"| sql
+    orchestrator -->|"3"| eda
+    orchestrator -->|"4"| train
+    orchestrator -->|"5"| score
+    orchestrator -->|"6"| impact
+
+    etl --> dbmodule
+    sql --> dbmodule
+    train --> dbmodule
+    score --> dbmodule
+
+    dbmodule -->|"default"| sqlite
+    dbmodule -.->|"si DATABASE_URL definida"| postgres
+
+    ci -.->|"corre tests/, no run_all.py completo"| repo
+
+    style orchestrator fill:#1a5fb4,color:#fff
+    style dbmodule fill:#26a269,color:#fff
+    style analyst fill:#0b3866,color:#fff
+    style ci fill:#8a8a8a,color:#fff
+    style sqlite fill:#5f5fa8,color:#fff
+    style postgres fill:#5f5fa8,color:#fff

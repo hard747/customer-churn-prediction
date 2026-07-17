@@ -1,0 +1,25 @@
+flowchart LR
+    CSV[("Telco-Customer-Churn.csv")] --> BD["build_database.py"]
+    BD --> DB[("churn.db / Postgres")]
+
+    DB --> SQL["run_sql_analysis.py"]
+    SQL --> SQLOUT["outputs/sql_analysis/*.csv"]
+
+    DB --> EDA["01_eda.ipynb"]
+    EDA --> FIGS1["reports/figures/01..10*.png"]
+
+    DB --> TRAIN["train_models.py"]
+    TRAIN --> CMP["outputs/model_comparison.csv"]
+    TRAIN --> FIGS2["reports/figures/roc_curves.png<br/>confusion_matrices.png<br/>feature_importance.png"]
+    TRAIN --> MODEL[("outputs/best_model.joblib")]
+
+    MODEL --> SCORE["generate_risk_scores.py"]
+    DB --> SCORE
+    SCORE --> SCORES["outputs/customer_risk_scores.csv"]
+
+    SCORES --> IMPACT["02_business_impact.ipynb"]
+    DB --> IMPACT
+    IMPACT --> FIGS3["reports/figures/11_cumulative_gains.png<br/>12_campaign_net_value_by_depth.png"]
+    IMPACT --> SIM["outputs/business_impact_simulation.csv"]
+
+    SCORES --> BI[["Power BI / Tableau<br/>(fuera de este repo)"]]

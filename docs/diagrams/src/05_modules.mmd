@@ -1,0 +1,45 @@
+classDiagram
+    class db_py {
+        <<módulo>>
+        +get_engine() Engine
+    }
+    class build_database_py {
+        <<módulo>>
+        +build_database(csv_path)
+    }
+    class run_sql_analysis_py {
+        <<módulo>>
+        +parse_named_queries(sql_text) dict
+        +run_sql_analysis() dict
+    }
+    class train_models_py {
+        <<módulo>>
+        +load_and_clean_data() DataFrame
+        +build_preprocessor() ColumnTransformer
+        +get_model_grids(preprocessor) dict
+        +evaluate_model(model, X_test, y_test) dict
+        +plot_roc_curves(...)
+        +plot_confusion_matrices(...)
+        +plot_feature_importance(...)
+        +main()
+    }
+    class generate_risk_scores_py {
+        <<módulo>>
+        +main()
+    }
+    class run_all_py {
+        <<módulo>>
+        +run_step(description, func)
+        +run_notebook(notebook_path)
+        +main()
+    }
+
+    build_database_py ..> db_py : usa
+    run_sql_analysis_py ..> db_py : usa
+    train_models_py ..> db_py : usa
+    generate_risk_scores_py ..> db_py : usa
+
+    run_all_py ..> build_database_py : orquesta (paso 1)
+    run_all_py ..> run_sql_analysis_py : orquesta (paso 2)
+    run_all_py ..> train_models_py : orquesta (paso 4)
+    run_all_py ..> generate_risk_scores_py : orquesta (paso 5)

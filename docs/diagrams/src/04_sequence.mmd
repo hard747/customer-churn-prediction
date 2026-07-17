@@ -1,0 +1,38 @@
+sequenceDiagram
+    actor U as Usuario
+    participant RA as run_all.py
+    participant BD as build_database.py
+    participant SQL as run_sql_analysis.py
+    participant EDA as 01_eda.ipynb
+    participant TR as train_models.py
+    participant SC as generate_risk_scores.py
+    participant IM as 02_business_impact.ipynb
+    participant DB as db.py (engine)
+
+    U->>RA: python src/run_all.py
+    RA->>BD: build_database()
+    BD->>DB: get_engine()
+    DB-->>BD: engine (SQLite o Postgres)
+    BD-->>RA: churn.db / tabla customers creada
+
+    RA->>SQL: run_sql_analysis()
+    SQL->>DB: get_engine()
+    SQL-->>RA: outputs/sql_analysis/*.csv
+
+    RA->>EDA: ejecutar notebook (nbclient)
+    EDA->>DB: get_engine()
+    EDA-->>RA: reports/figures/01..10*.png
+
+    RA->>TR: main()
+    TR->>DB: get_engine()
+    TR-->>RA: model_comparison.csv, best_model.joblib
+
+    RA->>SC: main()
+    SC->>DB: get_engine()
+    SC-->>RA: customer_risk_scores.csv
+
+    RA->>IM: ejecutar notebook (nbclient)
+    IM->>DB: get_engine()
+    IM-->>RA: business_impact_simulation.csv
+
+    RA-->>U: "Pipeline completo ejecutado sin errores"
