@@ -440,4 +440,4 @@ y [ADR-0007](docs/adr/0007-prefect-en-vez-de-airflow.md) /
 Distribuido bajo licencia [MIT](LICENSE). Dataset de uso público (IBM Telco
 Customer Churn, con fines educativos/de portafolio).
 
-**Autor:** [Tu Nombre] — único autor de este repositorio.
+**Autor:** Harre Bams Ayma Aranda — único autor de este repositorio.

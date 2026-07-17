@@ -442,4 +442,4 @@ and [ADR-0007](docs/adr/0007-prefect-en-vez-de-airflow.md) /
 Distributed under the [MIT](LICENSE) license. Public-use dataset (IBM
 Telco Customer Churn, for educational/portfolio purposes).
 
-**Author:** [Your Name] — sole author of this repository.
+**Author:** Harre Bams Ayma Aranda — sole author of this repository.
