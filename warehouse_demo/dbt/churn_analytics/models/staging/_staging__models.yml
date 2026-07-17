@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: stg_crm_customers
+    description: Perfil de cliente normalizado.
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+      - name: senior_citizen
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Yes", "No"]
+
+  - name: stg_crm_subscriptions
+    description: Contrato e servicos normalizados.
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+      - name: contract
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Month-to-month", "One year", "Two year"]
+
+  - name: stg_billing_charges
+    description: Cobrancas de faturamento, TotalCharges ja limpo (numerico, sem nulos).
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+      - name: total_charges
+        tests: [not_null]
+
+  - name: stg_churn_labels
+    description: Sinal historico de churn.
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+      - name: churn
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Yes", "No"]

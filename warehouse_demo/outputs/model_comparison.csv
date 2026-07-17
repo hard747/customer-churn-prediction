@@ -1,0 +1,4 @@
+model,accuracy,precision,recall,f1,roc_auc,cv_best_roc_auc,best_params
+XGBoost,0.7892122072391767,0.6287625418060201,0.5026737967914439,0.5586924219910847,0.8478790462166421,0.846734427443735,"{'classifier__learning_rate': 0.05, 'classifier__max_depth': 3, 'classifier__n_estimators': 200}"
+RandomForest,0.7899219304471257,0.6413043478260869,0.4732620320855615,0.5446153846153846,0.8458782195355086,0.8453319060348934,"{'classifier__max_depth': 6, 'classifier__min_samples_leaf': 2, 'classifier__n_estimators': 200}"
+LogisticRegression,0.7913413768630234,0.6290322580645161,0.5213903743315508,0.5701754385964912,0.8430972125345527,0.8450788202544273,"{'classifier__C': 10, 'classifier__class_weight': None}"

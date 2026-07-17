@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: fct_customer_features
+    description: >
+      Feature table final: um cliente por linha, todas as variaveis que
+      o modelo de churn consome. Join das 3 fontes operacionais
+      simuladas + o sinal historico, ja limpo e tipado.
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+      - name: total_charges
+        tests: [not_null]
+      - name: churn
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Yes", "No"]
+      - name: contract
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Month-to-month", "One year", "Two year"]

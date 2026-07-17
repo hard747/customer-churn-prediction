@@ -1,0 +1,16 @@
+name: "churn_analytics"
+version: "1.0.0"
+config-version: 2
+
+profile: "churn_analytics"
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  churn_analytics:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

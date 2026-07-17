@@ -1,0 +1,26 @@
+# Perfil de conexao do dbt. Usa env_var() para ler credenciais -- NUNCA
+# se hardcoda um usuario/senha aqui, e este arquivo e seguro de
+# commitar (nao contem segredos, so referencias a variaveis de ambiente).
+#
+# As variaveis (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE) sao
+# preenchidas no .env da raiz do projeto (ver .env.example) -- mesmas
+# credenciais que DATABASE_URL ja usa para a parte Python do pipeline,
+# so que o dbt precisa delas como campos separados em vez de uma unica
+# URL.
+#
+# O dbt procura este arquivo via a variavel de ambiente DBT_PROFILES_DIR
+# (ver warehouse_demo/README.md para o comando exato).
+
+churn_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('PGHOST') }}"
+      port: "{{ env_var('PGPORT', '5432') | as_number }}"
+      user: "{{ env_var('PGUSER') }}"
+      password: "{{ env_var('PGPASSWORD') }}"
+      dbname: "{{ env_var('PGDATABASE') }}"
+      schema: public
+      threads: 4
+      sslmode: "{{ env_var('PGSSLMODE', 'prefer') }}"

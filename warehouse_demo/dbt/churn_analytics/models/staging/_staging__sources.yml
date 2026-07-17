@@ -1,0 +1,40 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Tabelas brutas carregadas por warehouse_demo/src/build_raw_tables.py,
+      simulando o que um CRM (Salesforce), um sistema de assinaturas/ERP
+      (SAP) e um sistema de faturamento exporiam na vida real. Mesmo
+      customerID como chave real nas quatro -- nao e um join fabricado
+      entre datasets nao relacionados, e o mesmo dataset normalizado.
+    schema: public
+    tables:
+      - name: raw_crm_customers
+        description: Perfil demografico do cliente (simula export de CRM).
+        columns:
+          - name: customerID
+            quote: true # Postgres e sensivel a maiusculas; sem isso os testes genericos geram SQL sem aspas e falham com "column customerid does not exist"
+            tests: [not_null, unique]
+      - name: raw_crm_subscriptions
+        description: Contrato e servicos contratados (simula export de ERP/assinaturas).
+        columns:
+          - name: customerID
+            quote: true
+            tests: [not_null, unique]
+      - name: raw_billing_charges
+        description: >
+          Cobrancas de faturamento (simula export do sistema de billing).
+          TotalCharges chega como texto com linhas vazias -- limpeza real
+          em stg_billing_charges, nao na carga bruta (esse e justamente o
+          ponto de ter uma camada "raw" separada de "staging").
+        columns:
+          - name: customerID
+            quote: true
+            tests: [not_null, unique]
+      - name: raw_churn_labels
+        description: Sinal historico de churn.
+        columns:
+          - name: customerID
+            quote: true
+            tests: [not_null, unique]
