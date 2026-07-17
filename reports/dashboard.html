@@ -1,0 +1,437 @@
+<title>Dashboard de Risco de Churn</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-model:   #2a78d6;
+    --series-random:  #6b6a63;
+    --seq-100: #cde2fb; --seq-200: #9ec5f4; --seq-300: #6da7ec;
+    --seq-400: #3987e5; --seq-500: #256abf; --seq-600: #184f95; --seq-700: #0d366b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-model:   #3987e5;
+      --series-random:  #a8a69f;
+      --seq-100: #10233d; --seq-200: #123a63; --seq-300: #154d82;
+      --seq-400: #1c5cab; --seq-500: #2a78d6; --seq-600: #5598e7; --seq-700: #9ec5f4;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --series-model:   #3987e5;
+    --series-random:  #6b6a63;
+    --seq-100: #10233d; --seq-200: #123a63; --seq-300: #154d82;
+    --seq-400: #1c5cab; --seq-500: #2a78d6; --seq-600: #5598e7; --seq-700: #9ec5f4;
+  }
+
+  .viz-root {
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100%;
+    padding: 32px 20px 64px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .hdr h1 { font-size: 26px; font-weight: 600; margin: 0 0 4px; }
+  .hdr p { color: var(--text-secondary); font-size: 14px; margin: 0 0 28px; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .kpi .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+  .kpi .value { font-size: 32px; font-weight: 600; line-height: 1.1; }
+  .kpi .sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .chart-title { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
+  .chart-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 14px; }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .axis-label { fill: var(--text-muted); font-size: 11px; }
+  .value-label { fill: var(--text-secondary); font-size: 11px; font-weight: 600; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .baseline { stroke: var(--baseline); stroke-width: 1; }
+  .bar { cursor: pointer; }
+  .bar:hover { opacity: 0.85; }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--text-primary);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    opacity: 0;
+    transition: opacity 0.08s ease;
+    z-index: 20;
+    white-space: nowrap;
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip .t-row { display: flex; gap: 8px; justify-content: space-between; }
+  .tooltip .t-muted { color: var(--text-muted); }
+
+  .table-card { margin-top: 14px; }
+  .table-toolbar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .table-toolbar input[type="search"] {
+    background: var(--page-plane);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    color: var(--text-primary);
+    min-width: 220px;
+  }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .seg button {
+    background: var(--surface-1); color: var(--text-secondary);
+    border: none; padding: 6px 12px; font-size: 13px; cursor: pointer;
+    font-family: inherit;
+  }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button.active { background: var(--series-model); color: #fff; }
+  .table-note { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data-table th {
+    text-align: left; font-weight: 600; color: var(--text-secondary);
+    border-bottom: 1px solid var(--gridline); padding: 8px 10px;
+    position: sticky; top: 0; background: var(--surface-1);
+  }
+  table.data-table td {
+    padding: 7px 10px; border-bottom: 1px solid var(--gridline);
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table td.id { font-variant-numeric: normal; }
+  .table-scroll { max-height: 420px; overflow-y: auto; }
+  .decile-pill {
+    display: inline-block; padding: 1px 8px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+  }
+
+  .foot { margin-top: 24px; font-size: 12px; color: var(--text-muted); }
+  .foot a { color: var(--text-secondary); }
+
+  @media (max-width: 860px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="viz-root">
+  <div class="wrap">
+    <div class="hdr">
+      <h1>Análise de Risco de Churn — Visão Geral</h1>
+      <p>Telco Customer Churn · 7.043 clientes · modelo XGBoost (ROC-AUC 0,845) · dados de <code>outputs/customer_risk_scores.csv</code> e <code>outputs/business_impact_simulation.csv</code></p>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="card kpi">
+        <div class="label">Total de clientes</div>
+        <div class="value" id="kpi-total">—</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Taxa de churn geral</div>
+        <div class="value" id="kpi-churn-rate">—</div>
+        <div class="sub" id="kpi-churn-sub"></div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Clientes de alto risco (decis 9–10)</div>
+        <div class="value" id="kpi-high-risk">—</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Valor líquido — campanha ideal (60%)</div>
+        <div class="value" id="kpi-net-value">—</div>
+        <div class="sub">vs. seleção aleatória na mesma profundidade</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="card">
+        <div class="chart-title">Taxa de churn por decil de risco</div>
+        <div class="chart-sub">Decil 10 = clientes com maior probabilidade prevista de churn</div>
+        <div id="chart-decile"></div>
+      </div>
+      <div class="card">
+        <div class="chart-title">Valor líquido esperado por profundidade de campanha</div>
+        <div class="chart-sub">Modelo vs. seleção aleatória, a cada profundidade da lista</div>
+        <div class="legend">
+          <span><span class="swatch" style="background:var(--series-model)"></span>Modelo</span>
+          <span><span class="swatch" style="background:var(--series-random)"></span>Aleatório</span>
+        </div>
+        <div id="chart-value"></div>
+      </div>
+    </div>
+
+    <div class="card table-card">
+      <div class="chart-title">Lista acionável — clientes de maior risco</div>
+      <div class="chart-sub">Top 100 de 1.409 clientes nos decis 9–10, ordenados por probabilidade de churn</div>
+      <div class="table-toolbar">
+        <input type="search" id="search-id" placeholder="Buscar customerID…">
+        <div class="seg" id="decile-filter">
+          <button data-decile="all" class="active">Todos</button>
+          <button data-decile="10">Decil 10</button>
+          <button data-decile="9">Decil 9</button>
+        </div>
+        <span class="table-note" id="table-count"></span>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>customerID</th>
+              <th style="text-align:right">Probabilidade de churn</th>
+              <th>Decil</th>
+              <th>Churn real (histórico)</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="foot">
+      Fonte: pipeline de análise e predição de churn (Regressão Logística, Random Forest, XGBoost) —
+      <a href="https://github.com/hard747/customer-churn-prediction">github.com/hard747/customer-churn-prediction</a>.
+      Dashboard estático gerado a partir dos outputs reais do pipeline, sem dependências externas.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const DECILE_DATA = [{"decile":1,"n":710,"churn_rate":0.4},{"decile":2,"n":701,"churn_rate":1.6},{"decile":3,"n":702,"churn_rate":3.1},{"decile":4,"n":705,"churn_rate":7.4},{"decile":5,"n":704,"churn_rate":14.5},{"decile":6,"n":704,"churn_rate":20.5},{"decile":7,"n":704,"churn_rate":33.5},{"decile":8,"n":704,"churn_rate":43.5},{"decile":9,"n":704,"churn_rate":60.7},{"decile":10,"n":705,"churn_rate":80.3}];
+
+const BI_DATA = [{"strategy":"Modelo","depth":10,"net_value":149912.06},{"strategy":"Aleatorio","depth":10,"net_value":29517.57},{"strategy":"Modelo","depth":20,"net_value":256542.76},{"strategy":"Aleatorio","depth":20,"net_value":59035.14},{"strategy":"Modelo","depth":30,"net_value":322482.66},{"strategy":"Aleatorio","depth":30,"net_value":88319.57},{"strategy":"Modelo","depth":40,"net_value":366730.38},{"strategy":"Aleatorio","depth":40,"net_value":118050.29},{"strategy":"Modelo","depth":50,"net_value":390124.4},{"strategy":"Aleatorio","depth":50,"net_value":147334.71},{"strategy":"Modelo","depth":60,"net_value":398263.42},{"strategy":"Aleatorio","depth":60,"net_value":176852.29},{"strategy":"Modelo","depth":70,"net_value":396300.82},{"strategy":"Aleatorio","depth":70,"net_value":206349.86},{"strategy":"Modelo","depth":80,"net_value":385989.12},{"strategy":"Aleatorio","depth":80,"net_value":235867.43},{"strategy":"Modelo","depth":90,"net_value":373618.94},{"strategy":"Aleatorio","depth":90,"net_value":265385.0},{"strategy":"Modelo","depth":100,"net_value":360011.06},{"strategy":"Aleatorio","depth":100,"net_value":294882.57}];
+
+const TOP100 = [{"id":"7216-EWTRS","prob":93.4,"decile":10,"actual":"Yes"},{"id":"5419-JPRRN","prob":93.3,"decile":10,"actual":"Yes"},{"id":"0107-YHINA","prob":92.2,"decile":10,"actual":"Yes"},{"id":"5178-LMXOP","prob":92.2,"decile":10,"actual":"Yes"},{"id":"9497-QCMMS","prob":92.2,"decile":10,"actual":"Yes"},{"id":"9300-AGZNL","prob":92.2,"decile":10,"actual":"Yes"},{"id":"0295-PPHDO","prob":91.5,"decile":10,"actual":"Yes"},{"id":"3068-OMWZA","prob":91.0,"decile":10,"actual":"Yes"},{"id":"4826-XTSOH","prob":90.5,"decile":10,"actual":"Yes"},{"id":"1069-XAIEM","prob":90.2,"decile":10,"actual":"Yes"},{"id":"8149-RSOUN","prob":90.2,"decile":10,"actual":"Yes"},{"id":"4910-GMJOT","prob":90.2,"decile":10,"actual":"Yes"},{"id":"8603-IJWDN","prob":89.9,"decile":10,"actual":"Yes"},{"id":"5192-EBGOV","prob":89.5,"decile":10,"actual":"Yes"},{"id":"6861-XWTWQ","prob":89.5,"decile":10,"actual":"Yes"},{"id":"6521-YYTYI","prob":89.2,"decile":10,"actual":"Yes"},{"id":"9282-IZGQK","prob":89.1,"decile":10,"actual":"Yes"},{"id":"9248-OJYKK","prob":89.1,"decile":10,"actual":"Yes"},{"id":"6023-YEBUP","prob":88.9,"decile":10,"actual":"Yes"},{"id":"3988-RQIXO","prob":88.3,"decile":10,"actual":"Yes"},{"id":"3178-FESZO","prob":88.2,"decile":10,"actual":"Yes"},{"id":"4424-TKOPW","prob":88.1,"decile":10,"actual":"Yes"},{"id":"2720-WGKHP","prob":88.1,"decile":10,"actual":"Yes"},{"id":"1415-YFWLT","prob":88.1,"decile":10,"actual":"Yes"},{"id":"6567-HOOPW","prob":88.0,"decile":10,"actual":"Yes"},{"id":"8775-LHDJH","prob":88.0,"decile":10,"actual":"Yes"},{"id":"7493-TPUWZ","prob":88.0,"decile":10,"actual":"Yes"},{"id":"1455-UGQVH","prob":88.0,"decile":10,"actual":"Yes"},{"id":"4912-PIGUY","prob":87.9,"decile":10,"actual":"No"},{"id":"3158-MOERK","prob":87.8,"decile":10,"actual":"Yes"},{"id":"9681-OXGVC","prob":87.8,"decile":10,"actual":"Yes"},{"id":"8884-ADFVN","prob":87.7,"decile":10,"actual":"Yes"},{"id":"4822-RVYBB","prob":87.7,"decile":10,"actual":"Yes"},{"id":"9305-CDSKC","prob":87.7,"decile":10,"actual":"Yes"},{"id":"5597-GLBUC","prob":87.6,"decile":10,"actual":"Yes"},{"id":"8473-VUVJN","prob":87.5,"decile":10,"actual":"Yes"},{"id":"5240-IJOQT","prob":87.5,"decile":10,"actual":"Yes"},{"id":"6513-EECDB","prob":87.5,"decile":10,"actual":"Yes"},{"id":"3551-HUAZH","prob":87.5,"decile":10,"actual":"Yes"},{"id":"6894-LFHLY","prob":87.5,"decile":10,"actual":"Yes"},{"id":"4988-IQIGL","prob":87.5,"decile":10,"actual":"Yes"},{"id":"4102-OQUPX","prob":87.5,"decile":10,"actual":"Yes"},{"id":"6230-BSUXY","prob":87.5,"decile":10,"actual":"Yes"},{"id":"4844-JJWUY","prob":87.3,"decile":10,"actual":"Yes"},{"id":"2968-SSGAA","prob":87.2,"decile":10,"actual":"Yes"},{"id":"8580-AECUZ","prob":87.2,"decile":10,"actual":"Yes"},{"id":"0781-LKXBR","prob":87.2,"decile":10,"actual":"Yes"},{"id":"8058-INTPH","prob":87.2,"decile":10,"actual":"Yes"},{"id":"5494-HECPR","prob":87.2,"decile":10,"actual":"Yes"},{"id":"3776-EKTKM","prob":87.2,"decile":10,"actual":"Yes"},{"id":"8779-QRDMV","prob":87.0,"decile":10,"actual":"Yes"},{"id":"7024-OHCCK","prob":86.9,"decile":10,"actual":"Yes"},{"id":"2446-BEGGB","prob":86.9,"decile":10,"actual":"Yes"},{"id":"3811-VBYBZ","prob":86.9,"decile":10,"actual":"Yes"},{"id":"5567-WSELE","prob":86.8,"decile":10,"actual":"Yes"},{"id":"2202-CUYXZ","prob":86.8,"decile":10,"actual":"Yes"},{"id":"2012-NWRPA","prob":86.7,"decile":10,"actual":"Yes"},{"id":"2609-IAICY","prob":86.6,"decile":10,"actual":"Yes"},{"id":"7594-RQHXR","prob":86.5,"decile":10,"actual":"Yes"},{"id":"9057-SIHCH","prob":86.5,"decile":10,"actual":"Yes"},{"id":"0495-RVCBF","prob":86.5,"decile":10,"actual":"Yes"},{"id":"5919-TMRGD","prob":86.5,"decile":10,"actual":"Yes"},{"id":"1761-AEZZR","prob":86.4,"decile":10,"actual":"Yes"},{"id":"0318-QUUOB","prob":86.4,"decile":10,"actual":"Yes"},{"id":"8740-CRYFY","prob":86.4,"decile":10,"actual":"Yes"},{"id":"2514-GINMM","prob":86.4,"decile":10,"actual":"Yes"},{"id":"5960-WPXQM","prob":86.4,"decile":10,"actual":"Yes"},{"id":"9300-RENDD","prob":86.4,"decile":10,"actual":"Yes"},{"id":"7439-DKZTW","prob":86.4,"decile":10,"actual":"No"},{"id":"5299-SJCZT","prob":86.3,"decile":10,"actual":"Yes"},{"id":"1833-VGRUM","prob":86.3,"decile":10,"actual":"Yes"},{"id":"0021-IKXGC","prob":86.3,"decile":10,"actual":"No"},{"id":"0723-DRCLG","prob":86.3,"decile":10,"actual":"Yes"},{"id":"4273-MBHYA","prob":86.2,"decile":10,"actual":"No"},{"id":"9787-XVQIU","prob":86.2,"decile":10,"actual":"Yes"},{"id":"6496-SLWHQ","prob":86.2,"decile":10,"actual":"Yes"},{"id":"1452-VOQCH","prob":86.2,"decile":10,"actual":"No"},{"id":"9124-LHCJQ","prob":86.2,"decile":10,"actual":"Yes"},{"id":"1400-MMYXY","prob":86.2,"decile":10,"actual":"Yes"},{"id":"1157-BQCUW","prob":86.2,"decile":10,"actual":"Yes"},{"id":"6358-LYNGM","prob":86.2,"decile":10,"actual":"Yes"},{"id":"5834-ASPWA","prob":86.2,"decile":10,"actual":"Yes"},{"id":"0897-FEGMU","prob":86.1,"decile":10,"actual":"Yes"},{"id":"8098-LLAZX","prob":86.1,"decile":10,"actual":"Yes"},{"id":"7577-SWIFR","prob":86.0,"decile":10,"actual":"No"},{"id":"0970-ETWGE","prob":86.0,"decile":10,"actual":"Yes"},{"id":"2725-KXXWT","prob":86.0,"decile":10,"actual":"Yes"},{"id":"3027-ZTDHO","prob":86.0,"decile":10,"actual":"Yes"},{"id":"3722-WPXTK","prob":86.0,"decile":10,"actual":"Yes"},{"id":"7274-RTAPZ","prob":86.0,"decile":10,"actual":"Yes"},{"id":"1455-ESIQH","prob":86.0,"decile":10,"actual":"Yes"},{"id":"7851-WZEKY","prob":85.9,"decile":10,"actual":"Yes"},{"id":"7503-ZGUZJ","prob":85.7,"decile":10,"actual":"Yes"},{"id":"6702-OHFWR","prob":85.7,"decile":10,"actual":"Yes"},{"id":"5150-ITWWB","prob":85.7,"decile":10,"actual":"No"},{"id":"1374-DMZUI","prob":85.5,"decile":10,"actual":"Yes"},{"id":"2656-TABEH","prob":85.5,"decile":10,"actual":"Yes"},{"id":"2868-MZAGQ","prob":85.4,"decile":10,"actual":"Yes"},{"id":"0742-NXBGR","prob":85.4,"decile":10,"actual":"Yes"},{"id":"4927-WWOOZ","prob":85.3,"decile":10,"actual":"No"}];
+
+const TOTAL_CUSTOMERS = 7043;
+const CHURN_YES = 1869;
+const HIGH_RISK_COUNT = 1409;
+
+const fmtInt = n => n.toLocaleString('pt-BR');
+const fmtMoney = n => 'R$ ' + n.toLocaleString('pt-BR', {maximumFractionDigits: 0});
+const fmtPct = n => n.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
+
+document.getElementById('kpi-total').textContent = fmtInt(TOTAL_CUSTOMERS);
+document.getElementById('kpi-churn-rate').textContent = fmtPct(100 * CHURN_YES / TOTAL_CUSTOMERS);
+document.getElementById('kpi-churn-sub').textContent = fmtInt(CHURN_YES) + ' clientes com churn';
+document.getElementById('kpi-high-risk').textContent = fmtInt(HIGH_RISK_COUNT);
+document.getElementById('kpi-net-value').textContent = fmtMoney(398263.42);
+
+const tooltip = document.getElementById('tooltip');
+function showTooltip(evt, html) {
+  tooltip.innerHTML = html;
+  tooltip.classList.add('show');
+  moveTooltip(evt);
+}
+function moveTooltip(evt) {
+  const pad = 14;
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+function hideTooltip() { tooltip.classList.remove('show'); }
+
+function seqColor(t) {
+  const steps = ['--seq-100','--seq-200','--seq-300','--seq-400','--seq-500','--seq-600','--seq-700'];
+  const idx = Math.min(steps.length - 1, Math.floor(t * steps.length));
+  return `var(${steps[idx]})`;
+}
+
+function renderDecileChart() {
+  const W = 480, H = 260, padL = 36, padR = 10, padT = 20, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = 90;
+  const n = DECILE_DATA.length;
+  const gap = 6;
+  const barW = Math.min(24, (plotW - gap * (n - 1)) / n);
+  const usedW = barW * n + gap * (n - 1);
+  const startX = padL + (plotW - usedW) / 2;
+
+  let gridSvg = '';
+  [0, 20, 40, 60, 80].forEach(v => {
+    const y = padT + plotH - (v / maxVal) * plotH;
+    gridSvg += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" class="gridline"/>`;
+    gridSvg += `<text x="${padL - 8}" y="${y + 4}" text-anchor="end" class="axis-label">${v}%</text>`;
+  });
+
+  let bars = '';
+  DECILE_DATA.forEach((d, i) => {
+    const x = startX + i * (barW + gap);
+    const h = (d.churn_rate / maxVal) * plotH;
+    const y = padT + plotH - h;
+    const color = seqColor(d.churn_rate / 85);
+    bars += `<path d="M${x},${padT+plotH} L${x},${y+4} Q${x},${y} ${x+4},${y} L${x+barW-4},${y} Q${x+barW},${y} ${x+barW},${y+4} L${x+barW},${padT+plotH} Z"
+              fill="${color}" class="bar" data-decile="${d.decile}" data-rate="${d.churn_rate}" data-n="${d.n}"/>`;
+    bars += `<text x="${x + barW/2}" y="${padT + plotH + 18}" text-anchor="middle" class="axis-label">${d.decile}</text>`;
+    if (d.decile === 1 || d.decile === 10) {
+      bars += `<text x="${x + barW/2}" y="${y - 6}" text-anchor="middle" class="value-label">${fmtPct(d.churn_rate)}</text>`;
+    }
+  });
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">
+    ${gridSvg}
+    <line x1="${padL}" x2="${W-padR}" y1="${padT+plotH}" y2="${padT+plotH}" class="baseline"/>
+    ${bars}
+    <text x="${W/2}" y="${H-2}" text-anchor="middle" class="axis-label">decil de risco (1 = menor risco · 10 = maior risco)</text>
+  </svg>`;
+  document.getElementById('chart-decile').innerHTML = svg;
+
+  document.querySelectorAll('#chart-decile .bar').forEach(bar => {
+    bar.addEventListener('mousemove', e => {
+      const d = bar.dataset;
+      showTooltip(e, `<div class="t-row"><b>Decil ${d.decile}</b></div>
+        <div class="t-row"><span class="t-muted">Taxa de churn</span><b>${fmtPct(parseFloat(d.rate))}</b></div>
+        <div class="t-row"><span class="t-muted">Clientes</span><b>${fmtInt(parseInt(d.n))}</b></div>`);
+    });
+    bar.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+function renderValueChart() {
+  const W = 480, H = 260, padL = 46, padR = 10, padT = 20, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = 420000;
+  const depths = [...new Set(BI_DATA.map(d => d.depth))];
+  const n = depths.length;
+  const groupGap = 8;
+  const groupW = (plotW - groupGap * (n - 1)) / n;
+  const barW = Math.min(11, (groupW - 2) / 2);
+
+  let gridSvg = '';
+  [0, 100000, 200000, 300000, 400000].forEach(v => {
+    const y = padT + plotH - (v / maxVal) * plotH;
+    gridSvg += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" class="gridline"/>`;
+    gridSvg += `<text x="${padL - 8}" y="${y + 4}" text-anchor="end" class="axis-label">${v/1000}k</text>`;
+  });
+
+  let bars = '';
+  depths.forEach((depth, i) => {
+    const gx = padL + i * (groupW + groupGap);
+    const modelo = BI_DATA.find(d => d.depth === depth && d.strategy === 'Modelo');
+    const aleatorio = BI_DATA.find(d => d.depth === depth && d.strategy === 'Aleatorio');
+    const highlight = depth === 60;
+    if (highlight) {
+      bars += `<rect x="${gx - 3}" y="${padT}" width="${groupW + 6}" height="${plotH}" fill="var(--gridline)" opacity="0.4" rx="4"/>`;
+    }
+    [['Modelo', modelo, 'var(--series-model)', gx],
+     ['Aleatorio', aleatorio, 'var(--series-random)', gx + barW + 2]].forEach(([label, d, color, x]) => {
+      const h = (d.net_value / maxVal) * plotH;
+      const y = padT + plotH - h;
+      bars += `<path d="M${x},${padT+plotH} L${x},${y+3} Q${x},${y} ${x+3},${y} L${x+barW-3},${y} Q${x+barW},${y} ${x+barW},${y+3} L${x+barW},${padT+plotH} Z"
+                fill="${color}" class="bar" data-label="${label}" data-depth="${depth}" data-value="${d.net_value}"/>`;
+    });
+    bars += `<text x="${gx + groupW/2}" y="${padT + plotH + 18}" text-anchor="middle" class="axis-label">${depth}%</text>`;
+  });
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">
+    ${gridSvg}
+    <line x1="${padL}" x2="${W-padR}" y1="${padT+plotH}" y2="${padT+plotH}" class="baseline"/>
+    ${bars}
+    <text x="${W/2}" y="${H-2}" text-anchor="middle" class="axis-label">profundidade da campanha (% da base contatada)</text>
+  </svg>`;
+  document.getElementById('chart-value').innerHTML = svg;
+
+  document.querySelectorAll('#chart-value .bar').forEach(bar => {
+    bar.addEventListener('mousemove', e => {
+      const d = bar.dataset;
+      const strategyLabel = d.label === 'Modelo' ? 'Modelo' : 'Aleatório';
+      showTooltip(e, `<div class="t-row"><b>${strategyLabel} · ${d.depth}%</b></div>
+        <div class="t-row"><span class="t-muted">Valor líquido</span><b>${fmtMoney(parseFloat(d.value))}</b></div>`);
+    });
+    bar.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+let currentDecileFilter = 'all';
+let currentSearch = '';
+
+function renderTable() {
+  let rows = TOP100;
+  if (currentDecileFilter !== 'all') {
+    rows = rows.filter(r => String(r.decile) === currentDecileFilter);
+  }
+  if (currentSearch) {
+    rows = rows.filter(r => r.id.toLowerCase().includes(currentSearch.toLowerCase()));
+  }
+  document.getElementById('table-count').textContent = `${rows.length} de 100 exibidos`;
+  document.getElementById('table-body').innerHTML = rows.map(r => `
+    <tr>
+      <td class="id">${r.id}</td>
+      <td style="text-align:right">${fmtPct(r.prob)}</td>
+      <td><span class="decile-pill" style="background:${seqColor(r.decile/10)};color:${r.decile>=9?'#fff':'var(--text-primary)'}">${r.decile}</span></td>
+      <td>${r.actual === 'Yes' ? 'Sim' : 'Não'}</td>
+    </tr>`).join('');
+}
+
+document.getElementById('search-id').addEventListener('input', e => {
+  currentSearch = e.target.value.trim();
+  renderTable();
+});
+document.querySelectorAll('#decile-filter button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#decile-filter button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDecileFilter = btn.dataset.decile;
+    renderTable();
+  });
+});
+
+renderDecileChart();
+renderValueChart();
+renderTable();
+
+document.addEventListener('mousemove', e => {
+  if (tooltip.classList.contains('show')) moveTooltip(e);
+});
+</script>
