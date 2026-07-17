@@ -12,6 +12,19 @@ __pycache__/
 # Bases de datos y artefactos generados (se recrean con src/run_all.py)
 data/churn.db
 
+# Credenciales locales de Postgres (ver .env.example)
+.env
+
+# pytest / cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
+# dbt (warehouse_demo/) -- artefactos generados, se recrean con dbt run/test
+warehouse_demo/dbt/churn_analytics/target/
+warehouse_demo/dbt/churn_analytics/logs/
+warehouse_demo/dbt/churn_analytics/dbt_packages/
+
 # SO / editores
 .DS_Store
 Thumbs.db
