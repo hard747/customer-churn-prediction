@@ -33,6 +33,7 @@ opcional para Postgres vía Docker.
 - [Resultados](#resultados)
 - [Impacto de negocio (simulación en \$)](#impacto-de-negocio-simulación-en-)
 - [Risk scores para Power BI](#risk-scores-para-power-bi)
+- [Dashboard](#dashboard)
 - [Track adicional: patrón enterprise](#track-adicional-patrón-enterprise-crm--dbt--warehouse)
 - [Próximos pasos](#próximos-pasos)
 - [Licencia y autoría](#licencia-y-autoría)
@@ -410,6 +411,22 @@ contactar. El modelo se entrena solo con el 80% de train para que la
 evaluación de arriba sea honesta; el *scoring* final se aplica sobre el
 100% de los clientes porque el objetivo aquí no es medir performance
 (eso ya se hizo) sino producir una lista operativa completa.
+
+## Dashboard
+
+![Dashboard de riesgo de churn en Power BI](reports/figures/powerbi_dashboard.png)
+
+Dashboard construido en Power BI Desktop a partir de
+[`outputs/customer_risk_scores.csv`](outputs/customer_risk_scores.csv) y
+[`outputs/business_impact_simulation.csv`](outputs/business_impact_simulation.csv),
+archivo `.pbix` disponible en [`powerbi/customer_churn_dashboard.pbix`](powerbi/customer_churn_dashboard.pbix).
+Reúne: total de clientes, tasa de churn general, clientes de alto riesgo
+(deciles 9-10) y valor neto esperado de la campaña en la profundidad
+óptima (60%); la curva de tasa de churn por decil de riesgo (evidencia
+visual de que el modelo discrimina bien); la comparación de valor neto
+entre la estrategia del modelo y la selección aleatoria en cada
+profundidad; una tabla accionable de los clientes de mayor riesgo; y un
+segmentador por decil.
 
 ## Track adicional: patrón enterprise (CRM → dbt → warehouse)
 
