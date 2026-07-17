@@ -1,25 +1,31 @@
 """
-Orquesta el pipeline completo de cero, en orden:
+Orquestra o pipeline completo do zero, em ordem:
 
-1. Construir data/churn.db a partir del CSV crudo.
-2. Ejecutar las consultas SQL de analisis (outputs/sql_analysis/*.csv).
-3. Ejecutar el notebook de EDA (genera reports/figures/*.png).
-4. Entrenar y comparar los 3 modelos (outputs/model_comparison.csv,
+1. Construir o banco de dados a partir do CSV bruto (SQLite por
+   padrao, ou Postgres se DATABASE_URL estiver definida -- ver src/db.py).
+2. Executar as consultas SQL de analise (outputs/sql_analysis/*.csv).
+3. Executar o notebook de EDA (gera reports/figures/*.png).
+4. Treinar e comparar os 3 modelos (outputs/model_comparison.csv,
    reports/figures/roc_curves.png, confusion_matrices.png,
    feature_importance.png, outputs/best_model.joblib).
-5. Generar outputs/customer_risk_scores.csv.
+5. Gerar outputs/customer_risk_scores.csv.
+6. Executar o notebook de impacto de negocio (simulacao em $,
+   reports/figures/11_cumulative_gains.png e 12_campaign_net_value_by_depth.png).
 
-Pensado para que el proyecto completo se pueda reproducir con:
+Pensado para que o projeto completo possa ser reproduzido com:
     python src/run_all.py
 """
 
-import subprocess
 import sys
 from pathlib import Path
 
+import nbformat
+from nbclient import NotebookClient
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 SRC_DIR = BASE_DIR / "src"
-NOTEBOOK_PATH = BASE_DIR / "notebooks" / "01_eda.ipynb"
+EDA_NOTEBOOK = BASE_DIR / "notebooks" / "01_eda.ipynb"
+BUSINESS_IMPACT_NOTEBOOK = BASE_DIR / "notebooks" / "02_business_impact.ipynb"
 
 
 def run_step(description: str, func) -> None:
@@ -39,15 +45,15 @@ def run_sql_analysis() -> None:
     _run()
 
 
-def run_eda_notebook() -> None:
-    import nbformat
-    from nbclient import NotebookClient
-
-    nb = nbformat.read(NOTEBOOK_PATH, as_version=4)
-    client = NotebookClient(nb, timeout=600, kernel_name="python3", resources={"metadata": {"path": str(NOTEBOOK_PATH.parent)}})
+def run_notebook(notebook_path: Path) -> None:
+    nb = nbformat.read(notebook_path, as_version=4)
+    client = NotebookClient(
+        nb, timeout=600, kernel_name="python3",
+        resources={"metadata": {"path": str(notebook_path.parent)}},
+    )
     client.execute()
-    nbformat.write(nb, NOTEBOOK_PATH)
-    print(f"Notebook ejecutado y guardado con outputs: {NOTEBOOK_PATH}")
+    nbformat.write(nb, notebook_path)
+    print(f"Notebook executado e salvo com outputs: {notebook_path}")
 
 
 def train_models() -> None:
@@ -65,13 +71,14 @@ def generate_risk_scores() -> None:
 def main() -> None:
     sys.path.insert(0, str(SRC_DIR))
 
-    run_step("1/5 - Construyendo base de datos SQLite", build_database)
-    run_step("2/5 - Ejecutando consultas SQL de analisis", run_sql_analysis)
-    run_step("3/5 - Ejecutando notebook de EDA", run_eda_notebook)
-    run_step("4/5 - Entrenando y comparando modelos", train_models)
-    run_step("5/5 - Generando risk scores de clientes", generate_risk_scores)
+    run_step("1/6 - Construindo banco de dados", build_database)
+    run_step("2/6 - Executando consultas SQL de analise", run_sql_analysis)
+    run_step("3/6 - Executando notebook de EDA", lambda: run_notebook(EDA_NOTEBOOK))
+    run_step("4/6 - Treinando e comparando modelos", train_models)
+    run_step("5/6 - Gerando risk scores dos clientes", generate_risk_scores)
+    run_step("6/6 - Executando notebook de impacto de negocio", lambda: run_notebook(BUSINESS_IMPACT_NOTEBOOK))
 
-    print("\nPipeline completo ejecutado sin errores.")
+    print("\nPipeline completo executado sem erros.")
 
 
 if __name__ == "__main__":

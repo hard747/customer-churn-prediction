@@ -1,40 +1,40 @@
 """
-Entrena y compara 3 modelos de clasificacion para predecir churn de
-clientes: Regresion Logistica, Random Forest y XGBoost.
+Treina e compara 3 modelos de classificacao para prever churn de
+clientes: Regressao Logistica, Random Forest e XGBoost.
 
-Decisiones clave (documentadas aqui para que queden junto al codigo
-que las implementa; tambien se resumen en el README):
+Decisoes-chave (documentadas aqui para ficarem junto do codigo que as
+implementa; tambem resumidas no README):
 
 1. Split estratificado (train_test_split(..., stratify=y)):
-   el churn esta desbalanceado (~26.5% Yes / 73.5% No). Un split
-   aleatorio simple puede, por azar, dejar una proporcion distinta
-   de positivos en train y en test, lo que sesga tanto el
-   entrenamiento como la evaluacion. Estratificar por `y` garantiza
-   que train y test conserven la misma proporcion de churn que el
-   dataset completo, haciendo la comparacion de metricas confiable.
+   o churn esta desbalanceado (~26.5% Yes / 73.5% No). Um split
+   aleatorio simples pode, por acaso, deixar uma proporcao diferente
+   de positivos em treino e teste, enviesando tanto o treinamento
+   quanto a avaliacao. Estratificar por `y` garante que treino e
+   teste conservem a mesma proporcao de churn do dataset completo,
+   tornando a comparacao de metricas confiavel.
 
-2. ROC-AUC como metrica principal de seleccion (scoring en
-   GridSearchCV y CV):
-   con clases desbalanceadas, accuracy es enganosa: un modelo que
-   siempre predice "No churn" ya obtiene ~73.5% de accuracy sin
-   aprender nada util. ROC-AUC mide la capacidad del modelo para
-   *ordenar* clientes por riesgo (probabilidad de churn) a traves de
-   todos los umbrales posibles, independientemente del balance de
-   clases, lo que la hace mas robusta aqui y ademas es la metrica
-   relevante para el caso de uso real: priorizar una lista de
-   clientes en riesgo (deciles), no solo clasificar Yes/No con un
-   umbral fijo de 0.5.
+2. ROC-AUC como metrica principal de selecao (scoring no
+   GridSearchCV e no CV):
+   com classes desbalanceadas, accuracy e enganosa: um modelo que
+   sempre preve "No churn" ja obtem ~73.5% de accuracy sem aprender
+   nada util. ROC-AUC mede a capacidade do modelo de *ordenar*
+   clientes por risco (probabilidade de churn) atraves de todos os
+   limiares possiveis, independentemente do balanceamento das
+   classes, o que a torna mais robusta aqui e alem disso e a metrica
+   relevante para o caso de uso real: priorizar uma lista de clientes
+   em risco (decis), nao apenas classificar Yes/No com um limiar fixo
+   de 0.5.
 
-3. Pipeline (ColumnTransformer + modelo) en vez de preprocesar por
-   separado: evita fugas de informacion (el scaler/encoder se ajusta
-   solo con datos de entrenamiento dentro de cada fold de CV) y hace
-   que el mismo objeto se pueda usar despues para inferencia sobre
-   datos nuevos sin repetir el preprocesamiento a mano.
+3. Pipeline (ColumnTransformer + modelo) em vez de pre-processar
+   separadamente: evita vazamento de informacao (o scaler/encoder e
+   ajustado apenas com dados de treino dentro de cada fold do CV) e
+   permite que o mesmo objeto seja usado depois para inferencia sobre
+   dados novos sem repetir o pre-processamento manualmente.
 
-4. Busqueda de hiperparametros "ligera" (grids pequenos, 5-fold CV):
-   el objetivo es mostrar el flujo completo (CV + tuning) sin
-   incurrir en tiempos de ejecucion largos, adecuado para un
-   proyecto de portafolio que debe poder re-ejecutarse rapido.
+4. Busca de hiperparametros "leve" (grids pequenos, 5-fold CV):
+   o objetivo e mostrar o fluxo completo (CV + tuning) sem incorrer
+   em tempos de execucao longos, adequado para um projeto de
+   portfolio que precisa poder ser reexecutado rapidamente.
 """
 
 from pathlib import Path
@@ -62,8 +62,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from xgboost import XGBClassifier
 
+from db import get_engine
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = BASE_DIR / "data" / "churn.db"
 OUTPUT_DIR = BASE_DIR / "outputs"
 FIGURES_DIR = BASE_DIR / "reports" / "figures"
 MODEL_PATH = OUTPUT_DIR / "best_model.joblib"
@@ -82,38 +83,45 @@ CATEGORICAL_FEATURES = [
 
 
 def load_and_clean_data() -> pd.DataFrame:
-    import sqlite3
-
-    with sqlite3.connect(DB_PATH) as conn:
+    engine = get_engine()
+    with engine.connect() as conn:
         df = pd.read_sql_query("SELECT * FROM customers", conn)
 
-    # Los 11 clientes con TotalCharges nulo tienen tenure = 0 (recien
-    # dados de alta, sin facturacion acumulada todavia) -> 0 es el
-    # valor logico, no una imputacion estadistica arbitraria.
+    # Os 11 clientes com TotalCharges nulo tem tenure = 0 (recem
+    # cadastrados, sem faturamento acumulado ainda) -> 0 e o valor
+    # logico, nao uma imputacao estatistica arbitraria.
     df["TotalCharges"] = df["TotalCharges"].fillna(0.0)
 
-    # SeniorCitizen viene como 0/1 pero es semanticamente una bandera
-    # categorica (igual que Partner/Dependents); se homogeniza a
-    # Yes/No para que el OneHotEncoder la trate de forma consistente
-    # con el resto de columnas binarias.
+    # SeniorCitizen vem como 0/1 mas e semanticamente uma flag
+    # categorica (igual a Partner/Dependents); e homogeneizada para
+    # Yes/No para que o OneHotEncoder a trate de forma consistente
+    # com as demais colunas binarias.
     df["SeniorCitizen"] = df["SeniorCitizen"].map({0: "No", 1: "Yes"})
 
     df["Churn"] = df["Churn"].map({"Yes": 1, "No": 0})
     return df
 
 
-def build_preprocessor() -> ColumnTransformer:
+def build_preprocessor(
+    numeric_features: list[str] = NUMERIC_FEATURES,
+    categorical_features: list[str] = CATEGORICAL_FEATURES,
+) -> ColumnTransformer:
+    """Parametrizado (com os defaults do pipeline simples) para poder
+    ser reutilizado tal como esta a partir de
+    warehouse_demo/src/train_from_feature_table.py, que aponta para a
+    feature table do dbt com nomes de coluna diferentes (snake_case)
+    sem duplicar esta funcao."""
     return ColumnTransformer(
         transformers=[
-            ("num", StandardScaler(), NUMERIC_FEATURES),
-            ("cat", OneHotEncoder(handle_unknown="ignore", drop="if_binary"), CATEGORICAL_FEATURES),
+            ("num", StandardScaler(), numeric_features),
+            ("cat", OneHotEncoder(handle_unknown="ignore", drop="if_binary"), categorical_features),
         ]
     )
 
 
 def get_model_grids(preprocessor: ColumnTransformer) -> dict:
-    """Devuelve, por modelo, el Pipeline base y un grid de hiperparametros
-    pequeno (busqueda "ligera" segun se explica en el docstring del modulo)."""
+    """Retorna, por modelo, o Pipeline base e um grid de hiperparametros
+    pequeno (busca "leve" conforme explicado no docstring do modulo)."""
     return {
         "LogisticRegression": {
             "pipeline": Pipeline([
@@ -232,8 +240,8 @@ def main() -> None:
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=TEST_SIZE, stratify=y, random_state=RANDOM_STATE
     )
-    print(f"Train: {X_train.shape[0]} filas | Test: {X_test.shape[0]} filas")
-    print(f"Tasa de churn train: {y_train.mean():.3f} | test: {y_test.mean():.3f}")
+    print(f"Treino: {X_train.shape[0]} linhas | Teste: {X_test.shape[0]} linhas")
+    print(f"Taxa de churn treino: {y_train.mean():.3f} | teste: {y_test.mean():.3f}")
 
     preprocessor = build_preprocessor()
     model_grids = get_model_grids(preprocessor)
@@ -243,7 +251,7 @@ def main() -> None:
     comparison_rows = []
 
     for name, spec in model_grids.items():
-        print(f"\nEntrenando {name} (GridSearchCV, {CV_FOLDS}-fold, scoring=roc_auc)...")
+        print(f"\nTreinando {name} (GridSearchCV, {CV_FOLDS}-fold, scoring=roc_auc)...")
         search = GridSearchCV(
             spec["pipeline"],
             spec["param_grid"],
@@ -262,15 +270,15 @@ def main() -> None:
         metrics["cv_best_roc_auc"] = search.best_score_
         comparison_rows.append(metrics)
 
-        print(f"  Mejor CV ROC-AUC: {search.best_score_:.4f} | params: {search.best_params_}")
-        print(f"  Test -> " + " | ".join(f"{k}: {v:.4f}" for k, v in metrics.items() if k not in ("model", "best_params", "cv_best_roc_auc")))
+        print(f"  Melhor CV ROC-AUC: {search.best_score_:.4f} | params: {search.best_params_}")
+        print("  Teste -> " + " | ".join(f"{k}: {v:.4f}" for k, v in metrics.items() if k not in ("model", "best_params", "cv_best_roc_auc")))
 
     comparison_df = pd.DataFrame(comparison_rows)[
         ["model", "accuracy", "precision", "recall", "f1", "roc_auc", "cv_best_roc_auc", "best_params"]
     ].sort_values("roc_auc", ascending=False)
     comparison_path = OUTPUT_DIR / "model_comparison.csv"
     comparison_df.to_csv(comparison_path, index=False)
-    print(f"\nTabla comparativa guardada en {comparison_path}")
+    print(f"\nTabela comparativa salva em {comparison_path}")
     print(comparison_df.to_string(index=False))
 
     plot_roc_curves(fitted_models, X_test, y_test, FIGURES_DIR / "roc_curves.png")
@@ -281,8 +289,8 @@ def main() -> None:
     plot_feature_importance(best_name, best_model, FIGURES_DIR / "feature_importance.png")
 
     joblib.dump({"model": best_model, "model_name": best_name, "feature_cols": feature_cols}, MODEL_PATH)
-    print(f"\nMejor modelo: {best_name} (ROC-AUC test = {comparison_df.iloc[0]['roc_auc']:.4f})")
-    print(f"Modelo guardado en {MODEL_PATH}")
+    print(f"\nMelhor modelo: {best_name} (ROC-AUC teste = {comparison_df.iloc[0]['roc_auc']:.4f})")
+    print(f"Modelo salvo em {MODEL_PATH}")
 
 
 if __name__ == "__main__":

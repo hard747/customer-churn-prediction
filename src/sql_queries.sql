@@ -1,73 +1,88 @@
 -- ============================================================
--- Consultas de analisis exploratorio sobre data/churn.db
--- Tabla: customers
--- Cada consulta esta delimitada por un marcador "-- name: <id>"
--- que src/run_sql_analysis.py usa para identificarla y ejecutarla
--- por separado (permite reusar el mismo archivo .sql desde Python
--- sin duplicar texto ni mantener las consultas hardcodeadas).
+-- Consultas de analise exploratoria sobre a tabela customers
+-- (SQLite por padrao, ou Postgres se DATABASE_URL estiver definida).
+-- Cada consulta e delimitada por um marcador "-- name: <id>" que
+-- src/run_sql_analysis.py usa para identifica-la e executa-la
+-- separadamente (permite reusar o mesmo arquivo .sql a partir do
+-- Python sem duplicar texto nem manter as consultas hardcoded).
+--
+-- Notas de portabilidade SQLite <-> Postgres:
+-- 1) Os nomes de coluna com maiusculas (Contract, Churn,
+--    PaymentMethod, MonthlyCharges, TotalCharges, InternetService)
+--    vao entre aspas duplas. O SQLite e insensivel a maiusculas em
+--    identificadores sem aspas, mas o Postgres nao: sem aspas, o
+--    Postgres os procura em minusculo e falha. Aspas duplas e
+--    sintaxe ANSI SQL padrao, funciona igual nos dois motores.
+-- 2) ROUND(AVG(coluna_float), 2) e convertido explicitamente para
+--    NUMERIC. O Postgres nao tem uma sobrecarga de ROUND() para
+--    double precision (so para numeric), entao AVG() sobre uma
+--    coluna float sem conversao falha com "function round(double
+--    precision, integer) does not exist". O SQLite, por ser de
+--    tipagem dinamica, nunca teve esse problema, por isso so
+--    apareceu ao testar contra o Postgres.
 -- ============================================================
 
 -- name: churn_rate_by_contract
--- Tasa de churn por tipo de contrato.
--- Motivacion: el tipo de contrato es tipicamente el predictor mas
--- fuerte de churn en este dataset (los contratos mes a mes no
--- tienen penalizacion por cancelar).
+-- Taxa de churn por tipo de contrato.
+-- Motivacao: o tipo de contrato costuma ser o preditor mais forte de
+-- churn neste dataset (contratos mes a mes nao tem penalidade por
+-- cancelamento).
 SELECT
-    Contract,
+    "Contract",
     COUNT(*) AS total_clientes,
-    SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS clientes_churn,
-    ROUND(100.0 * SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 2) AS tasa_churn_pct
+    SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS clientes_churn,
+    ROUND(100.0 * SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 2) AS tasa_churn_pct
 FROM customers
-GROUP BY Contract
+GROUP BY "Contract"
 ORDER BY tasa_churn_pct DESC;
 
 -- name: churn_rate_by_payment_method
--- Tasa de churn por metodo de pago.
--- Motivacion: metodos de pago manuales (cheque electronico/postal)
--- suelen asociarse a mayor friccion y, por lo tanto, mayor churn
--- frente a metodos automaticos (tarjeta/transferencia).
+-- Taxa de churn por metodo de pagamento.
+-- Motivacao: metodos de pagamento manuais (cheque eletronico/postal)
+-- costumam se associar a mais friccao e, portanto, mais churn frente
+-- a metodos automaticos (cartao/transferencia).
 SELECT
-    PaymentMethod,
+    "PaymentMethod",
     COUNT(*) AS total_clientes,
-    SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS clientes_churn,
-    ROUND(100.0 * SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 2) AS tasa_churn_pct
+    SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS clientes_churn,
+    ROUND(100.0 * SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 2) AS tasa_churn_pct
 FROM customers
-GROUP BY PaymentMethod
+GROUP BY "PaymentMethod"
 ORDER BY tasa_churn_pct DESC;
 
 -- name: tenure_by_churn_status
--- Antiguedad (tenure) promedio y cargos promedio segun si el cliente
--- se dio de baja o no.
--- Motivacion: clientes nuevos (bajo tenure) son mas propensos a
--- cancelar ("luna de miel" corta); cuantificar la brecha ayuda a
--- dimensionar el problema.
+-- Antiguidade (tenure) media e cobrancas medias segundo se o cliente
+-- cancelou ou nao.
+-- Motivacao: clientes novos (tenure baixo) sao mais propensos a
+-- cancelar ("lua de mel" curta); quantificar a diferenca ajuda a
+-- dimensionar o problema.
 SELECT
-    Churn,
+    "Churn",
     COUNT(*) AS total_clientes,
     ROUND(AVG(tenure), 2) AS tenure_promedio_meses,
-    ROUND(AVG(MonthlyCharges), 2) AS cargo_mensual_promedio,
-    ROUND(AVG(TotalCharges), 2) AS cargo_total_promedio
+    ROUND(CAST(AVG("MonthlyCharges") AS NUMERIC), 2) AS cargo_mensual_promedio,
+    ROUND(CAST(AVG("TotalCharges") AS NUMERIC), 2) AS cargo_total_promedio
 FROM customers
-GROUP BY Churn;
+GROUP BY "Churn";
 
 -- name: churn_rate_by_internet_service
--- Tasa de churn por tipo de servicio de internet.
--- Motivacion: fibra optica suele ser mas cara y, en este dataset,
--- se asocia a mayor insatisfaccion/competencia -> mayor churn.
+-- Taxa de churn por tipo de servico de internet.
+-- Motivacao: fibra optica costuma ser mais cara e, neste dataset, se
+-- associa a mais insatisfacao/concorrencia -> mais churn.
 SELECT
-    InternetService,
+    "InternetService",
     COUNT(*) AS total_clientes,
-    SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS clientes_churn,
-    ROUND(100.0 * SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 2) AS tasa_churn_pct,
-    ROUND(AVG(MonthlyCharges), 2) AS cargo_mensual_promedio
+    SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS clientes_churn,
+    ROUND(100.0 * SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 2) AS tasa_churn_pct,
+    ROUND(CAST(AVG("MonthlyCharges") AS NUMERIC), 2) AS cargo_mensual_promedio
 FROM customers
-GROUP BY InternetService
+GROUP BY "InternetService"
 ORDER BY tasa_churn_pct DESC;
 
 -- name: churn_rate_by_tenure_bucket
--- Tasa de churn por rango de antiguedad (buckets de tenure).
--- Motivacion: permite ver si la relacion tenure-churn es lineal o
--- se concentra en un segmento especifico (p. ej. primeros 12 meses).
+-- Taxa de churn por faixa de antiguidade (buckets de tenure).
+-- Motivacao: permite ver se a relacao tenure-churn e linear ou se
+-- concentra em um segmento especifico (p. ex. primeiros 12 meses).
 SELECT
     CASE
         WHEN tenure <= 12 THEN '0-12 meses'
@@ -76,8 +91,8 @@ SELECT
         ELSE '49+ meses'
     END AS rango_tenure,
     COUNT(*) AS total_clientes,
-    SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS clientes_churn,
-    ROUND(100.0 * SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 2) AS tasa_churn_pct
+    SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS clientes_churn,
+    ROUND(100.0 * SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) / COUNT(*), 2) AS tasa_churn_pct
 FROM customers
 GROUP BY rango_tenure
 ORDER BY MIN(tenure);
