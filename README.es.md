@@ -428,6 +428,11 @@ entre la estrategia del modelo y la selección aleatoria en cada
 profundidad; una tabla accionable de los clientes de mayor riesgo; y un
 segmentador por decil.
 
+También hay una segunda versión, en [`reports/dashboard.html`](reports/dashboard.html):
+una página autocontenida (sin dependencias externas), con los mismos KPIs
+y gráficos, que corre directo en el navegador sin instalar nada — verla
+en vivo en **[hard747.github.io/customer-churn-prediction/reports/dashboard.html](https://hard747.github.io/customer-churn-prediction/reports/dashboard.html)**.
+
 ## Track adicional: patrón enterprise (CRM → dbt → warehouse)
 
 [`warehouse_demo/`](warehouse_demo/README.md) implementa, aparte del
