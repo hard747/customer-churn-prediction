@@ -32,6 +32,7 @@ CI on GitHub Actions, and optional Postgres support via Docker.
 - [Results](#results)
 - [Business impact (\$ simulation)](#business-impact--simulation)
 - [Risk scores for Power BI](#risk-scores-for-power-bi)
+- [Dashboard](#dashboard)
 - [Additional track: enterprise pattern](#additional-track-enterprise-pattern-crm--dbt--warehouse)
 - [Next steps](#next-steps)
 - [License and authorship](#license-and-authorship)
@@ -412,6 +413,21 @@ is trained on only the 80% training split so the evaluation above is
 honest; the final *scoring* is applied to 100% of customers because the
 goal here isn't measuring performance (that's already done) but
 producing a complete operational list.
+
+## Dashboard
+
+![Churn risk dashboard in Power BI](reports/figures/powerbi_dashboard.png)
+
+Dashboard built in Power BI Desktop from
+[`outputs/customer_risk_scores.csv`](outputs/customer_risk_scores.csv) and
+[`outputs/business_impact_simulation.csv`](outputs/business_impact_simulation.csv),
+`.pbix` file available at [`powerbi/customer_churn_dashboard.pbix`](powerbi/customer_churn_dashboard.pbix).
+Brings together: total customers, overall churn rate, high-risk
+customers (deciles 9-10), and expected net value of the campaign at the
+optimal depth (60%); the churn rate curve by risk decile (visual
+evidence that the model discriminates well); the net value comparison
+between the model-driven strategy and random selection at each depth;
+an actionable table of the highest-risk customers; and a decile slicer.
 
 ## Additional track: enterprise pattern (CRM → dbt → warehouse)
 
